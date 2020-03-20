@@ -42,6 +42,7 @@ def _make_task_request(queue_name, task, port):
             task.app_engine_http_request.relative_uri
         )
 
+        headers.update(getattr(task.app_engine_http_request, 'headers', {}))
         headers.update({
             'X-AppEngine-QueueName': queue_name,
             'X-AppEngine-TaskName': task.name.rsplit("/", 1)[-1],
