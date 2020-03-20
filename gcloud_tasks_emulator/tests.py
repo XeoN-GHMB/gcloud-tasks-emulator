@@ -12,7 +12,7 @@ from google.cloud.tasks_v2 import CloudTasksClient
 from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
     CloudTasksGrpcTransport
 
-from .server import _make_task_request , create_server
+from server import _make_task_request , create_server
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
@@ -200,7 +200,7 @@ class TestCase(BaseTestCase):
         class FakeResponse:
             status = 200
 
-        with mock.patch("gcloud_tasks_emulator.server._make_task_request", return_value=FakeResponse()):
+        with sleuth.fake("server._make_task_request", return_value=FakeResponse()):
             self._client.run_task(response.name)
 
         # Should return NOT_FOUND
