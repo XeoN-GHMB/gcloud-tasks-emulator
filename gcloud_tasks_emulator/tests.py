@@ -12,7 +12,7 @@ from google.cloud.tasks_v2 import CloudTasksClient
 from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
     CloudTasksGrpcTransport
 
-from server import _make_task_request , create_server
+from server import _make_task_request, create_server
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
@@ -247,7 +247,6 @@ class TestCase(BaseTestCase):
             }
         }
 
-
         self._client.create_task(path, task)
         parent = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
         task_ = [x for x in self._client.list_tasks(parent)][-1]
@@ -255,6 +254,7 @@ class TestCase(BaseTestCase):
         with mock.patch('urllib.request.urlopen', noop):
             req = _make_task_request('test_queue2', task_, 9009)
         assert req.headers['Custom'] == 'custom'
+
 
 class CustomPortTestCase(BaseTestCase):
 
