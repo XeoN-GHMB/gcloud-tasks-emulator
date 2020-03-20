@@ -175,6 +175,24 @@ class TestCase(BaseTestCase):
         response = self._client.create_task(path, task)
         self.assertTrue(response.name.startswith(path))
 
+    def test_create_task_without_http_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+
+        self._client.pause_queue(path)
+        payload = "Hello World!"
+
+        task = {
+            'app_engine_http_request': {  # Specify the type of request.
+                'relative_uri': '/example_task_handler',
+                'body': payload.encode()
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
     def test_run_task(self):
         self.test_create_queue()  # Create a couple of queues
 

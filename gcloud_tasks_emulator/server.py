@@ -10,7 +10,7 @@ from urllib.parse import parse_qs
 import grpc
 from google.api_core.exceptions import NotFound
 from google.cloud.tasks_v2.proto import (cloudtasks_pb2, cloudtasks_pb2_grpc,
-                                         queue_pb2, task_pb2)
+                                         queue_pb2, task_pb2, target_pb2)
 from google.protobuf import empty_pb2
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.rpc.status_pb2 import Status
@@ -92,7 +92,7 @@ class QueueState(object):
         if task.app_engine_http_request:
             # Set a default http_method
             task.app_engine_http_request.http_method = (
-                task.app_engine_http_request.http_method or "POST"
+                task.app_engine_http_request.http_method or target_pb2.HttpMethod.Value("POST")
             )
 
         self._queue_tasks[queue].append(task)
