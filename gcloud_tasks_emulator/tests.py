@@ -15,8 +15,12 @@ from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
 from server import create_server
 
 
+mock_calls = []
+
+
 class MockRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
+        mock_calls.append({'method': self.command, 'path': self.path})
         self.send_response(200)
         self.end_headers()
 
@@ -261,6 +265,8 @@ class CustomPortTestCase(BaseTestCase):
         cls._server.join(timeout=1)
 
     def setUp(self):
+        mock_calls.clear()
+
         self._server = create_server("localhost", 9022, 10123)
         self._server.start()
         time.sleep(1)
@@ -306,6 +312,7 @@ class CustomPortTestCase(BaseTestCase):
         self.assertTrue(response.name.startswith(path))
 
         self._client.run_task(response.name)
+        self.assertListEqual(mock_calls, [{'method': 'POST', 'path': '/example_task_handler'}])
 
 
 if __name__ == '__main__':
