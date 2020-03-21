@@ -34,7 +34,7 @@ def _make_task_request(queue_name, task, port):
     headers = {}
     data = None
 
-    if task.app_engine_http_request:
+    if task.app_engine_http_request.relative_uri:
         data = task.app_engine_http_request.body
 
         url = "http://localhost:%s%s" % (
@@ -49,9 +49,18 @@ def _make_task_request(queue_name, task, port):
             'X-AppEngine-TaskExecutionCount': 0,  # FIXME: Populate
             'X-AppEngine-TaskETA': 0,  # FIXME: Populate
         })
+    elif task.http_request.url:
+        data = task.http_request.body
+        url = task.http_request.url
+        headers.update({
+            'X-CloudTasks-QueueName': queue_name,
+            'X-CloudTasks-TaskName': task.name.rsplit("/", 1)[-1],
+            'X-CloudTasks-TaskRetryCount': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskExecutionCount': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskETA': 0,  # FIXME: Populate
+        })
     else:
-        assert(task.http_request)  # FIXME:
-        pass
+        raise Exception("Either app_engine_http_request or http_request is required")
 
     req = request.Request(url, data=data)
     for k, v in headers.items():
@@ -89,10 +98,15 @@ class QueueState(object):
             queue, int(datetime.now().timestamp())
         )
 
-        if task.app_engine_http_request:
+        if task.app_engine_http_request.relative_uri:
             # Set a default http_method
             task.app_engine_http_request.http_method = (
                 task.app_engine_http_request.http_method or target_pb2.HttpMethod.Value("POST")
+            )
+        elif task.http_request.url:
+            # Set a default http_method
+            task.http_request.http_method = (
+                task.http_request.http_method or target_pb2.HttpMethod.Value("POST")
             )
 
         self._queue_tasks[queue].append(task)
