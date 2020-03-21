@@ -313,7 +313,10 @@ class CustomPortTestCase(BaseTestCase):
         task = {
             'app_engine_http_request': {  # Specify the type of request.
                 'relative_uri': '/example_task_handler',
-                'body': payload.encode()
+                'body': payload.encode(),
+                'headers': {
+                    'Content-Type': 'text/plain'
+                },
             }
         }
 
@@ -325,6 +328,7 @@ class CustomPortTestCase(BaseTestCase):
         self.assertEqual(mock_calls[0]['method'], 'POST')
         self.assertEqual(mock_calls[0]['path'], '/example_task_handler')
         self.assertEqual(mock_calls[0]['headers']['X-Appengine-Queuename'], path)
+        self.assertEqual(mock_calls[0]['headers']['Content-Type'], 'text/plain')
 
     def test_run_app_engine_http_request_task_with_custom_method(self):
         self.test_create_queue()  # Create a couple of queues
@@ -359,7 +363,10 @@ class CustomPortTestCase(BaseTestCase):
         task = {
             'http_request': {  # Specify the type of request.
                 'url': 'http://localhost:10123/http_request_task_handler',
-                'body': payload.encode()
+                'body': payload.encode(),
+                'headers': {
+                    'Content-Type': 'text/plain'
+                },
             }
         }
 
@@ -371,6 +378,7 @@ class CustomPortTestCase(BaseTestCase):
         self.assertEqual(mock_calls[0]['method'], 'POST')
         self.assertEqual(mock_calls[0]['path'], '/http_request_task_handler')
         self.assertEqual(mock_calls[0]['headers']['X-Cloudtasks-Queuename'], path)
+        self.assertEqual(mock_calls[0]['headers']['Content-Type'], 'text/plain')
 
     def test_run_http_request_task_with_custom_method(self):
         self.test_create_queue()  # Create a couple of queues

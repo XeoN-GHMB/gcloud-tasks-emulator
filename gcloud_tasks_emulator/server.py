@@ -43,6 +43,7 @@ def _make_task_request(queue_name, task, port):
             task.app_engine_http_request.relative_uri
         )
 
+        headers.update(task.app_engine_http_request.headers)
         headers.update({
             'X-AppEngine-QueueName': queue_name,
             'X-AppEngine-TaskName': task.name.rsplit("/", 1)[-1],
@@ -54,6 +55,7 @@ def _make_task_request(queue_name, task, port):
         method = target_pb2.HttpMethod.Name(task.http_request.http_method)
         data = task.http_request.body
         url = task.http_request.url
+        headers.update(task.http_request.headers)
         headers.update({
             'X-CloudTasks-QueueName': queue_name,
             'X-CloudTasks-TaskName': task.name.rsplit("/", 1)[-1],
