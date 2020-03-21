@@ -19,6 +19,11 @@ mock_calls = []
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        mock_calls.append({'method': self.command, 'path': self.path})
+        self.send_response(200)
+        self.end_headers()
+
     def do_POST(self):
         mock_calls.append({'method': self.command, 'path': self.path})
         self.send_response(200)
@@ -302,7 +307,6 @@ class CustomPortTestCase(BaseTestCase):
 
         task = {
             'app_engine_http_request': {  # Specify the type of request.
-                'http_method': 'POST',
                 'relative_uri': '/example_task_handler',
                 'body': payload.encode()
             }
@@ -314,6 +318,25 @@ class CustomPortTestCase(BaseTestCase):
         self._client.run_task(response.name)
         self.assertListEqual(mock_calls, [{'method': 'POST', 'path': '/example_task_handler'}])
 
+    def test_run_app_engine_http_request_task_with_custom_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        task = {
+            'app_engine_http_request': {  # Specify the type of request.
+                'http_method': 'GET',
+                'relative_uri': '/example_task_handler',
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
+        self._client.run_task(response.name)
+        self.assertListEqual(mock_calls, [{'method': 'GET', 'path': '/example_task_handler'}])
+
     def test_run_http_request_task(self):
         self.test_create_queue()  # Create a couple of queues
 
@@ -324,7 +347,6 @@ class CustomPortTestCase(BaseTestCase):
 
         task = {
             'http_request': {  # Specify the type of request.
-                'http_method': 'POST',
                 'url': 'http://localhost:10123/http_request_task_handler',
                 'body': payload.encode()
             }
@@ -337,6 +359,28 @@ class CustomPortTestCase(BaseTestCase):
         self.assertListEqual(
             mock_calls,
             [{'method': 'POST', 'path': '/http_request_task_handler'}]
+        )
+
+    def test_run_http_request_task_with_custom_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        task = {
+            'http_request': {  # Specify the type of request.
+                'http_method': 'GET',
+                'url': 'http://localhost:10123/http_request_task_handler',
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
+        self._client.run_task(response.name)
+        self.assertListEqual(
+            mock_calls,
+            [{'method': 'GET', 'path': '/http_request_task_handler'}]
         )
 
 

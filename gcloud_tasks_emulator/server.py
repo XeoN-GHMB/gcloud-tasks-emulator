@@ -35,6 +35,7 @@ def _make_task_request(queue_name, task, port):
     data = None
 
     if task.app_engine_http_request.relative_uri:
+        method = target_pb2.HttpMethod.Name(task.app_engine_http_request.http_method)
         data = task.app_engine_http_request.body
 
         url = "http://localhost:%s%s" % (
@@ -50,6 +51,7 @@ def _make_task_request(queue_name, task, port):
             'X-AppEngine-TaskETA': 0,  # FIXME: Populate
         })
     elif task.http_request.url:
+        method = target_pb2.HttpMethod.Name(task.http_request.http_method)
         data = task.http_request.body
         url = task.http_request.url
         headers.update({
@@ -62,7 +64,7 @@ def _make_task_request(queue_name, task, port):
     else:
         raise Exception("Either app_engine_http_request or http_request is required")
 
-    req = request.Request(url, data=data)
+    req = request.Request(url, method=method, data=data)
     for k, v in headers.items():
         req.add_header(k, v)
 
