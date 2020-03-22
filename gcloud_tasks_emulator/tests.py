@@ -1,5 +1,4 @@
 import threading
-import time
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest import TestCase as BaseTestCase
@@ -8,6 +7,7 @@ import grpc
 import sleuth
 from google.api_core.client_options import ClientOptions
 from google.api_core.exceptions import Unknown
+from google.api_core.retry import Retry
 from google.cloud.tasks_v2 import CloudTasksClient
 from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
     CloudTasksGrpcTransport
@@ -45,7 +45,6 @@ class TestCase(BaseTestCase):
     def setUp(self):
         self._server = create_server("localhost", 9022)
         self._server.start()
-        time.sleep(1)
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9022"))
 
@@ -58,7 +57,8 @@ class TestCase(BaseTestCase):
 
         # Create default queue
         self._client.create_queue(
-            self._parent, {"name": "%s/queues/default" % self._parent}
+            self._parent, {"name": "%s/queues/default" % self._parent},
+            retry=Retry(initial=1e-6, maximum=5),  # Wait until server starts
         )
 
     def tearDown(self):
@@ -213,7 +213,6 @@ class TestCase(BaseTestCase):
     def test_default_queue_name(self):
         server = create_server("localhost", 9023, 10124, "projects/[P]/locations/[L]/queues/[Q]")
         server.start()
-        time.sleep(1)
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9023"))
         client = CloudTasksClient(
@@ -245,7 +244,6 @@ class CustomPortTestCase(BaseTestCase):
     def setUp(self):
         self._server = create_server("localhost", 9022, 10123)
         self._server.start()
-        time.sleep(1)
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9022"))
 
@@ -255,6 +253,12 @@ class CustomPortTestCase(BaseTestCase):
         )
 
         self._parent = self._client.location_path('[PROJECT]', '[LOCATION]')
+
+        # Create default queue
+        self._client.create_queue(
+            self._parent, {"name": "%s/queues/default" % self._parent},
+            retry=Retry(initial=1e-6, maximum=5),  # Wait until server starts
+        )
 
     def tearDown(self):
         self._server.stop()
