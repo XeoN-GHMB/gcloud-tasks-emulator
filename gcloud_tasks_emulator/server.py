@@ -49,8 +49,8 @@ def _make_task_request(queue_name, task, host, port):
         headers.update({
             'X-AppEngine-QueueName': queue_name,
             'X-AppEngine-TaskName': task.name.rsplit("/", 1)[-1],
-            'X-AppEngine-TaskRetryCount': 0,  # FIXME: Populate
-            'X-AppEngine-TaskExecutionCount': 0,  # FIXME: Populate
+            'X-AppEngine-TaskRetryCount': task.dispatch_count - 1,
+            'X-AppEngine-TaskExecutionCount': task.dispatch_count - 1,
             'X-AppEngine-TaskETA': 0,  # FIXME: Populate
         })
     elif task.http_request.url:
@@ -61,8 +61,8 @@ def _make_task_request(queue_name, task, host, port):
         headers.update({
             'X-CloudTasks-QueueName': queue_name,
             'X-CloudTasks-TaskName': task.name.rsplit("/", 1)[-1],
-            'X-CloudTasks-TaskRetryCount': 0,  # FIXME: Populate
-            'X-CloudTasks-TaskExecutionCount': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskRetryCount': task.dispatch_count - 1,
+            'X-CloudTasks-TaskExecutionCount': task.dispatch_count - 1,
             'X-CloudTasks-TaskETA': 0,  # FIXME: Populate
         })
     else:
