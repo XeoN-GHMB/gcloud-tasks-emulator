@@ -81,11 +81,12 @@ class QueueState(object):
         so they can be processed
     """
 
-    def __init__(self, target_host, target_port):
+    def __init__(self, target_host, target_port, max_retries):
         self._queues = {}
         self._queue_tasks = {}
         self._target_host = target_host
         self._target_port = target_port
+        self._max_retries = max_retries
 
     def create_queue(self, parent, queue):
         assert(queue.name)
@@ -214,20 +215,16 @@ class QueueState(object):
         response_status = 200
 
         task = self._queue_tasks[queue_name].pop(index)  # Remove the task
+        task.dispatch_count += 1
         try:
             dispatch_time = now()
             response = _make_task_request(queue_name, task, self._target_host, port)
         except error.HTTPError as e:
             response_status = e.code
-            logging.error("Error submitting task, moving to the back of the queue")
-            logging.error("Reason was: %s" % e.reason)
-            self._queue_tasks[queue_name].append(task)
+            logger.error("[TASKS] Error submitting task, reason: %s", e.reason)
         except (ConnectionRefusedError, error.URLError):
             response_status = 500
-            logger.exception(
-                "Error submitting task, moving to the back of the queue"
-            )
-            self._queue_tasks[queue_name].append(task)
+            logger.error("[TASKS] Error submitting task")
         else:
             response_status = response.status
 
@@ -246,6 +243,14 @@ class QueueState(object):
         task.MergeFrom(Task(**kwargs))
 
         assert(task)
+
+        if 400 <= response_status and response_status < 600:
+            if self._max_retries < 0 or task.dispatch_count <= self._max_retries:
+                logger.info("[TASKS] Moving failed task to the back of the queue")
+                self._queue_tasks[queue_name].append(task)
+            else:
+                logger.info("[TASKS] Giving up failed task")
+
         return task
 
 
@@ -403,8 +408,8 @@ class Processor(threading.Thread):
 
 
 class Server(object):
-    def __init__(self, host, port, target_host, target_port, default_queue_names):
-        self._state = QueueState(target_host, target_port)
+    def __init__(self, host, port, target_host, target_port, default_queue_names, max_retries):
+        self._state = QueueState(target_host, target_port, max_retries)
         self._api = APIThread(self._state, host, port)
         self._processor = Processor(self._state)
 
@@ -441,6 +446,6 @@ class Server(object):
 def create_server(
     host, port,
     target_host=DEFAULT_TARGET_HOST, target_port=DEFAULT_TARGET_PORT,
-    default_queue_names=None
+    default_queue_names=None, max_retries=-1
 ):
-    return Server(host, port, target_host, target_port, default_queue_names or [])
+    return Server(host, port, target_host, target_port, default_queue_names or [], max_retries)
