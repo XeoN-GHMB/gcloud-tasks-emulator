@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from gcloud_tasks_emulator.server import create_server, DEFAULT_TARGET_PORT
+from gcloud_tasks_emulator.server import create_server, DEFAULT_TARGET_PORT, DEFAULT_TARGET_HOST
 
 # Random, apparently not often used
 DEFAULT_PORT = 9022
@@ -31,6 +31,12 @@ if __name__ == '__main__':
         "-t", "--target-port",
         type=int, help='the port to which the task runner will POST requests to',
         default=DEFAULT_TARGET_PORT,
+    )
+
+    start.add_argument(
+        "-H", "--target-host",
+        type=str, help="the hostname to submit tasks too (default is 'localhost')"
+        default=DEFAULT_TARGET_HOST,
     )
 
     start.add_argument("-q", "--quiet", action="store_true", default=False)
