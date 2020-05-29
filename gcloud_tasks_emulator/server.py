@@ -408,5 +408,9 @@ class Server(object):
             self.stop()
 
 
-def create_server(host, port, target_host=DEFAULT_TARGET_HOST, target_port=DEFAULT_TARGET_PORT, default_queue_name=None):
+def create_server(
+    host, port,
+    target_host=DEFAULT_TARGET_HOST, target_port=DEFAULT_TARGET_PORT,
+    default_queue_name=None
+):
     return Server(host, port, target_host, target_port, default_queue_name)

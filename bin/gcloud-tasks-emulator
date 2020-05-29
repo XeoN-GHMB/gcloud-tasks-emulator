@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     start.add_argument(
         "-H", "--target-host",
-        type=str, help="the hostname to submit tasks too (default is 'localhost')"
+        type=str, help="the hostname to submit tasks too (default is 'localhost')",
         default=DEFAULT_TARGET_HOST,
     )
 
