@@ -2,7 +2,7 @@ import threading
 import time
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from unittest import TestCase as BaseTestCase
+from unittest import mock, TestCase as BaseTestCase
 
 import grpc
 import sleuth
@@ -12,7 +12,7 @@ from google.cloud.tasks_v2 import CloudTasksClient
 from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
     CloudTasksGrpcTransport
 
-from server import create_server
+from server import _make_task_request, create_server
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
@@ -187,7 +187,7 @@ class TestCase(BaseTestCase):
         payload = "Hello World!"
 
         task = {
-            'app_engine_http_request': {  # Specify the type of request.
+            'app_engine_http_request': {  # specify the type of request.
                 'http_method': 'POST',
                 'relative_uri': '/example_task_handler',
                 'body': payload.encode()
@@ -228,6 +228,32 @@ class TestCase(BaseTestCase):
         self.assertEqual(queue.name, "projects/[P]/locations/[L]/queues/[Q]")
 
         server.stop()
+
+    def test_custom_headers(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+
+        self._client.pause_queue(path)
+
+        payload = "Hello World!"
+
+        task = {
+            'app_engine_http_request': {
+                'http_method': 'POST',
+                'relative_uri': '/example_task_handler',
+                'body': payload.encode(),
+                'headers': {'custom': 'custom'}
+            }
+        }
+
+        self._client.create_task(path, task)
+        parent = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        task_ = [x for x in self._client.list_tasks(parent)][-1]
+        def noop(req): return req
+        with mock.patch('urllib.request.urlopen', noop):
+            req = _make_task_request('test_queue2', task_, 9009)
+        assert req.headers['Custom'] == 'custom'
 
 
 class CustomPortTestCase(BaseTestCase):
