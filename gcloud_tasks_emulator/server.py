@@ -10,7 +10,7 @@ from urllib.parse import parse_qs
 import grpc
 from google.api_core.exceptions import NotFound
 from google.cloud.tasks_v2.proto import (cloudtasks_pb2, cloudtasks_pb2_grpc,
-                                         queue_pb2, task_pb2)
+                                         queue_pb2, task_pb2, target_pb2)
 from google.protobuf import empty_pb2
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.rpc.status_pb2 import Status
@@ -34,7 +34,8 @@ def _make_task_request(queue_name, task, port):
     headers = {}
     data = None
 
-    if task.app_engine_http_request:
+    if task.app_engine_http_request.relative_uri:
+        method = target_pb2.HttpMethod.Name(task.app_engine_http_request.http_method)
         data = task.app_engine_http_request.body
 
         url = "http://localhost:%s%s" % (
@@ -50,11 +51,22 @@ def _make_task_request(queue_name, task, port):
             'X-AppEngine-TaskExecutionCount': 0,  # FIXME: Populate
             'X-AppEngine-TaskETA': 0,  # FIXME: Populate
         })
+    elif task.http_request.url:
+        method = target_pb2.HttpMethod.Name(task.http_request.http_method)
+        data = task.http_request.body
+        url = task.http_request.url
+        headers.update(task.http_request.headers)
+        headers.update({
+            'X-CloudTasks-QueueName': queue_name,
+            'X-CloudTasks-TaskName': task.name.rsplit("/", 1)[-1],
+            'X-CloudTasks-TaskRetryCount': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskExecutionCount': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskETA': 0,  # FIXME: Populate
+        })
     else:
-        assert(task.http_request)  # FIXME:
-        pass
+        raise Exception("Either app_engine_http_request or http_request is required")
 
-    req = request.Request(url, data=data)
+    req = request.Request(url, method=method, data=data)
     for k, v in headers.items():
         req.add_header(k, v)
 
@@ -90,10 +102,15 @@ class QueueState(object):
             queue, int(datetime.now().timestamp())
         )
 
-        if task.app_engine_http_request:
+        if task.app_engine_http_request.relative_uri:
             # Set a default http_method
             task.app_engine_http_request.http_method = (
-                task.app_engine_http_request.http_method or "POST"
+                task.app_engine_http_request.http_method or target_pb2.HttpMethod.Value("POST")
+            )
+        elif task.http_request.url:
+            # Set a default http_method
+            task.http_request.http_method = (
+                task.http_request.http_method or target_pb2.HttpMethod.Value("POST")
             )
 
         self._queue_tasks[queue].append(task)

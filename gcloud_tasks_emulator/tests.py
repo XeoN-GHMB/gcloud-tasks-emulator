@@ -15,8 +15,22 @@ from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
 from server import _make_task_request, create_server
 
 
+mock_calls = []
+
+
 class MockRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self._handle_request()
+
     def do_POST(self):
+        self._handle_request()
+
+    def _handle_request(self):
+        mock_calls.append({
+            'method': self.command,
+            'path': self.path,
+            'headers': dict(self.headers),
+        })
         self.send_response(200)
         self.end_headers()
 
@@ -175,6 +189,24 @@ class TestCase(BaseTestCase):
         response = self._client.create_task(path, task)
         self.assertTrue(response.name.startswith(path))
 
+    def test_create_task_without_http_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+
+        self._client.pause_queue(path)
+        payload = "Hello World!"
+
+        task = {
+            'app_engine_http_request': {  # Specify the type of request.
+                'relative_uri': '/example_task_handler',
+                'body': payload.encode()
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
     def test_run_task(self):
         self.test_create_queue()  # Create a couple of queues
 
@@ -269,6 +301,8 @@ class CustomPortTestCase(BaseTestCase):
         cls._server.join(timeout=1)
 
     def setUp(self):
+        mock_calls.clear()
+
         self._server = create_server("localhost", 9022, 10123)
         self._server.start()
         time.sleep(1)
@@ -294,7 +328,7 @@ class CustomPortTestCase(BaseTestCase):
         ret = self._client.create_queue(self._parent, {"name": path2})
         self.assertEqual(ret.name, path2)
 
-    def test_run_task(self):
+    def test_run_app_engine_http_request_task(self):
         self.test_create_queue()  # Create a couple of queues
 
         path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
@@ -304,9 +338,11 @@ class CustomPortTestCase(BaseTestCase):
 
         task = {
             'app_engine_http_request': {  # Specify the type of request.
-                'http_method': 'POST',
                 'relative_uri': '/example_task_handler',
-                'body': payload.encode()
+                'body': payload.encode(),
+                'headers': {
+                    'Content-Type': 'text/plain'
+                },
             }
         }
 
@@ -314,6 +350,83 @@ class CustomPortTestCase(BaseTestCase):
         self.assertTrue(response.name.startswith(path))
 
         self._client.run_task(response.name)
+        self.assertEqual(len(mock_calls), 1)
+        self.assertEqual(mock_calls[0]['method'], 'POST')
+        self.assertEqual(mock_calls[0]['path'], '/example_task_handler')
+        self.assertEqual(mock_calls[0]['headers']['X-Appengine-Queuename'], path)
+        self.assertEqual(mock_calls[0]['headers']['Content-Type'], 'text/plain')
+
+    def test_run_app_engine_http_request_task_with_custom_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        task = {
+            'app_engine_http_request': {  # Specify the type of request.
+                'http_method': 'GET',
+                'relative_uri': '/example_task_handler',
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
+        self._client.run_task(response.name)
+        self.assertEqual(len(mock_calls), 1)
+        self.assertEqual(mock_calls[0]['method'], 'GET')
+        self.assertEqual(mock_calls[0]['path'], '/example_task_handler')
+        self.assertEqual(mock_calls[0]['headers']['X-Appengine-Queuename'], path)
+
+    def test_run_http_request_task(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        payload = "Hello World!"
+
+        task = {
+            'http_request': {  # Specify the type of request.
+                'url': 'http://localhost:10123/http_request_task_handler',
+                'body': payload.encode(),
+                'headers': {
+                    'Content-Type': 'text/plain'
+                },
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
+        self._client.run_task(response.name)
+        self.assertEqual(len(mock_calls), 1)
+        self.assertEqual(mock_calls[0]['method'], 'POST')
+        self.assertEqual(mock_calls[0]['path'], '/http_request_task_handler')
+        self.assertEqual(mock_calls[0]['headers']['X-Cloudtasks-Queuename'], path)
+        self.assertEqual(mock_calls[0]['headers']['Content-Type'], 'text/plain')
+
+    def test_run_http_request_task_with_custom_method(self):
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        task = {
+            'http_request': {  # Specify the type of request.
+                'http_method': 'GET',
+                'url': 'http://localhost:10123/http_request_task_handler',
+            }
+        }
+
+        response = self._client.create_task(path, task)
+        self.assertTrue(response.name.startswith(path))
+
+        self._client.run_task(response.name)
+        self.assertEqual(len(mock_calls), 1)
+        self.assertEqual(mock_calls[0]['method'], 'GET')
+        self.assertEqual(mock_calls[0]['path'], '/http_request_task_handler')
+        self.assertEqual(mock_calls[0]['headers']['X-Cloudtasks-Queuename'], path)
 
 
 if __name__ == '__main__':
