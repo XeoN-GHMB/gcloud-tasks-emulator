@@ -243,7 +243,7 @@ class TestCase(BaseTestCase):
         )
 
     def test_default_queue_name(self):
-        server = create_server("localhost", 9023, 10124, "projects/[P]/locations/[L]/queues/[Q]")
+        server = create_server("localhost", 9023, "localhost", 10124, "projects/[P]/locations/[L]/queues/[Q]")
         server.start()
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9023"))
@@ -283,7 +283,7 @@ class TestCase(BaseTestCase):
         task_ = [x for x in self._client.list_tasks(parent)][-1]
         def noop(req): return req
         with mock.patch('urllib.request.urlopen', noop):
-            req = _make_task_request('test_queue2', task_, 9009)
+            req = _make_task_request('test_queue2', task_, "localhost", 9009)
         assert req.headers['Custom'] == 'custom'
 
 
@@ -302,7 +302,7 @@ class CustomPortTestCase(BaseTestCase):
     def setUp(self):
         mock_calls.clear()
 
-        self._server = create_server("localhost", 9022, 10123)
+        self._server = create_server("localhost", 9022, "localhost", 10123)
         self._server.start()
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9022"))
@@ -331,6 +331,36 @@ class CustomPortTestCase(BaseTestCase):
         path2 = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
         ret = self._client.create_queue(self._parent, {"name": path2})
         self.assertEqual(ret.name, path2)
+
+    def test_custom_target_host(self):
+        # Override the target host so we can check that works
+        self._server._state._target_host = "www.example.com"
+
+        self.test_create_queue()  # Create a couple of queues
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        self._client.pause_queue(path)  # Don't run any tasks while testing
+
+        payload = "Hello World!"
+
+        task = {
+            'app_engine_http_request': {  # Specify the type of request.
+                'relative_uri': '/example_task_handler',
+                'body': payload.encode(),
+                'headers': {
+                    'Content-Type': 'text/plain'
+                },
+            }
+        }
+
+        response = self._client.create_task(path, task)
+
+        class FakeResponse:
+            status = 200
+
+        with sleuth.fake("server._make_task_request", return_value=FakeResponse()) as fake:
+            self._client.run_task(response.name)
+            self.assertEqual(fake.calls[0].args[2], "www.example.com")
 
     def test_run_app_engine_http_request_task(self):
         self.test_create_queue()  # Create a couple of queues

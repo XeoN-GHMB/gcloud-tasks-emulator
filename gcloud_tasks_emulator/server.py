@@ -19,6 +19,7 @@ from google.rpc.status_pb2 import Status
 _LOOP_SLEEP_TIME = 0.1
 
 DEFAULT_TARGET_PORT = 80
+DEFAULT_TARGET_HOST = "localhost"
 
 Queue = queue_pb2.Queue
 Task = task_pb2.Task
@@ -28,7 +29,7 @@ Attempt = task_pb2.Attempt
 logger = logging.getLogger("gcloud-tasks-emulator")
 
 
-def _make_task_request(queue_name, task, port):
+def _make_task_request(queue_name, task, host, port):
     logger.info("[TASKS] Submitting task %s", task.name)
 
     headers = {}
@@ -38,7 +39,8 @@ def _make_task_request(queue_name, task, port):
         method = target_pb2.HttpMethod.Name(task.app_engine_http_request.http_method)
         data = task.app_engine_http_request.body
 
-        url = "http://localhost:%s%s" % (
+        url = "http://%s:%s%s" % (
+            host,
             port,
             task.app_engine_http_request.relative_uri
         )
@@ -79,9 +81,10 @@ class QueueState(object):
         so they can be processed
     """
 
-    def __init__(self, target_port):
+    def __init__(self, target_host, target_port):
         self._queues = {}
         self._queue_tasks = {}
+        self._target_host = target_host
         self._target_port = target_port
 
     def create_queue(self, parent, queue):
@@ -210,7 +213,7 @@ class QueueState(object):
         task = self._queue_tasks[queue_name].pop(index)  # Remove the task
         try:
             dispatch_time = now()
-            response = _make_task_request(queue_name, task, port)
+            response = _make_task_request(queue_name, task, self._target_host, port)
         except error.HTTPError as e:
             response_status = e.code
             logging.error("Error submitting task, moving to the back of the queue")
@@ -370,8 +373,8 @@ class Processor(threading.Thread):
 
 
 class Server(object):
-    def __init__(self, host, port, target_port, default_queue_name):
-        self._state = QueueState(target_port)
+    def __init__(self, host, port, target_host, target_port, default_queue_name):
+        self._state = QueueState(target_host, target_port)
         self._api = APIThread(self._state, host, port)
         self._processor = Processor(self._state)
 
@@ -405,5 +408,9 @@ class Server(object):
             self.stop()
 
 
-def create_server(host, port, target_port=DEFAULT_TARGET_PORT, default_queue_name=None):
-    return Server(host, port, target_port, default_queue_name)
+def create_server(
+    host, port,
+    target_host=DEFAULT_TARGET_HOST, target_port=DEFAULT_TARGET_PORT,
+    default_queue_name=None
+):
+    return Server(host, port, target_host, target_port, default_queue_name)
