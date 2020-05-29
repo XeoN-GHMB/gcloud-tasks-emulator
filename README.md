@@ -37,3 +37,8 @@ by passing the fully-qualified name of the queue:
 ```
 gcloud-tasks-emulator start --default-queue=projects/[PROJECT]/locations/[LOCATION]/queues/default
 ```
+## Testing
+Run:
+```
+python gcloud_tasks_emulator/tests.py
+```
