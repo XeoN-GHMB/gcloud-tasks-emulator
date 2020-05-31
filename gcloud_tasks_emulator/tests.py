@@ -243,7 +243,7 @@ class TestCase(BaseTestCase):
         )
 
     def test_default_queue_name(self):
-        server = create_server("localhost", 9023, "localhost", 10124, "projects/[P]/locations/[L]/queues/[Q]")
+        server = create_server("localhost", 9023, "localhost", 10124, ["projects/[P]/locations/[L]/queues/[Q]"])
         server.start()
 
         transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9023"))
@@ -257,6 +257,27 @@ class TestCase(BaseTestCase):
 
         queue = queues[0]
         self.assertEqual(queue.name, "projects/[P]/locations/[L]/queues/[Q]")
+
+        server.stop()
+
+    def test_multiple_default_queue_names(self):
+        server = create_server(
+            "localhost", 9023, "localhost", 10124,
+            ["projects/[P]/locations/[L]/queues/[Q]", "projects/[P]/locations/[L]/queues/[Q2]"]
+        )
+        server.start()
+
+        transport = CloudTasksGrpcTransport(channel=grpc.insecure_channel("127.0.0.1:9023"))
+        client = CloudTasksClient(
+            transport=transport,
+            client_options=ClientOptions(api_endpoint="127.0.0.1:9023")
+        )
+
+        queues = list(client.list_queues(parent="projects/[P]/locations/[L]"))
+        self.assertEqual(len(queues), 2)
+
+        self.assertEqual(queues[0].name, "projects/[P]/locations/[L]/queues/[Q]")
+        self.assertEqual(queues[1].name, "projects/[P]/locations/[L]/queues/[Q2]")
 
         server.stop()
 
