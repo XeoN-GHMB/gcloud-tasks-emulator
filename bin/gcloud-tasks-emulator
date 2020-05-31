@@ -10,8 +10,8 @@ from gcloud_tasks_emulator.server import create_server, DEFAULT_TARGET_PORT, DEF
 DEFAULT_PORT = 9022
 
 
-def main(host, port, target_port, default_queue_name):
-    server = create_server(host, port, target_port, default_queue_name)
+def main(host, port, target_host, target_port, default_queue_name):
+    server = create_server(host, port, target_host, target_port, default_queue_name)
     return server.run()
 
 
@@ -60,4 +60,4 @@ if __name__ == '__main__':
     else:
         root.setLevel(logging.INFO)
 
-    sys.exit(main("localhost", args.port, args.target_port, args.default_queue))
+    sys.exit(main("localhost", args.port, args.target_host, args.target_port, args.default_queue))
