@@ -6,7 +6,7 @@ from unittest import mock, TestCase as BaseTestCase
 import grpc
 import sleuth
 from google.api_core.client_options import ClientOptions
-from google.api_core.exceptions import Unknown
+from google.api_core.exceptions import NotFound
 from google.api_core.retry import Retry
 from google.cloud.tasks_v2 import CloudTasksClient
 from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import \
@@ -237,7 +237,7 @@ class TestCase(BaseTestCase):
 
         # Should return NOT_FOUND
         self.assertRaises(
-            Unknown,
+            NotFound,
             self._client.run_task,
             "%s/tasks/1119129292929292929" % path,  # Not a valid task
         )
