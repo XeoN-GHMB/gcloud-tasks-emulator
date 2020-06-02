@@ -43,6 +43,27 @@ const client = new CloudTasksClient({
 });
 ```
 
+### Java
+
+```java
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.InstantiatingGrpcChannelProvider;
+import com.google.cloud.tasks.v2.CloudTasksClient;
+import com.google.cloud.tasks.v2.CloudTasksSettings;
+import io.grpc.ManagedChannelBuilder;
+
+CloudTasksSettings settings = CloudTasksSettings.newBuilder()
+        .setCredentialsProvider(NoCredentialsProvider.create())
+        .setTransportChannelProvider(
+                InstantiatingGrpcChannelProvider.newBuilder()
+                        .setEndpoint("localhost:9090")
+                        .setChannelConfigurator(ManagedChannelBuilder::usePlaintext)
+                        .build()
+        )
+        .build();
+CloudTasksClient client = CloudTasksClient.create(settings);
+```
+
 ## The 'default' queue
 
 By default, the emulator won't create a 'default' queue, however you can enable this
