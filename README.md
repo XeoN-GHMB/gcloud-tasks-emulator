@@ -30,6 +30,19 @@ client = CloudTasksClient(
 )
 ```
 
+### Node.js
+
+```js
+const grpc = require("@grpc/grpc-js");
+const { CloudTasksClient } = require('@google-cloud/tasks');
+
+const client = new CloudTasksClient({
+    servicePath: "localhost",
+    port: 9090,
+    sslCreds: grpc.credentials.createInsecure()
+});
+```
+
 ## The 'default' queue
 
 By default, the emulator won't create a 'default' queue, however you can enable this
