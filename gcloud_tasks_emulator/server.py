@@ -104,7 +104,7 @@ class QueueState(object):
 
     def create_task(self, queue, task):
         task.name = task.name or "%s/tasks/%s" % (
-            queue, int(datetime.now().timestamp())
+            queue, int(datetime.now().timestamp() * 1000000)
         )
 
         if task.app_engine_http_request.relative_uri:
