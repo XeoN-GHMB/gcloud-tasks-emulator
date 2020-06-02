@@ -373,12 +373,12 @@ class Processor(threading.Thread):
 
 
 class Server(object):
-    def __init__(self, host, port, target_host, target_port, default_queue_name):
+    def __init__(self, host, port, target_host, target_port, default_queue_names):
         self._state = QueueState(target_host, target_port)
         self._api = APIThread(self._state, host, port)
         self._processor = Processor(self._state)
 
-        if default_queue_name:
+        for default_queue_name in default_queue_names:
             parent = default_queue_name.rsplit("/", 3)[0]
             self._state.create_queue(
                 parent, Queue(name=default_queue_name)
@@ -411,6 +411,6 @@ class Server(object):
 def create_server(
     host, port,
     target_host=DEFAULT_TARGET_HOST, target_port=DEFAULT_TARGET_PORT,
-    default_queue_name=None
+    default_queue_names=None
 ):
-    return Server(host, port, target_host, target_port, default_queue_name)
+    return Server(host, port, target_host, target_port, default_queue_names or [])
