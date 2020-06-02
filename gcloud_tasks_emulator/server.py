@@ -72,6 +72,7 @@ def _make_task_request(queue_name, task, host, port):
     for k, v in headers.items():
         req.add_header(k, v)
 
+    logger.info("[TASKS] Requesting %s %s", req.method, req.full_url)
     return request.urlopen(req)
 
 
