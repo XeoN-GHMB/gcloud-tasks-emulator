@@ -40,7 +40,8 @@ setup(
         "bin/gcloud-tasks-emulator",
     ],
     install_requires=[
-        'grpcio',
+        'grpcio>=1.29.0',
+        'pyyaml>=5.3.1',
         'google-cloud-tasks>=1.3.0',
     ],
     python_requires='>=3.6',

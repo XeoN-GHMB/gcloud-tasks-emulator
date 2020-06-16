@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+import yaml
 
 from gcloud_tasks_emulator.server import create_server, DEFAULT_TARGET_PORT, DEFAULT_TARGET_HOST
 
@@ -13,6 +14,21 @@ DEFAULT_PORT = 9022
 def main(host, port, target_host, target_port, default_queue_names, max_retries):
     server = create_server(host, port, target_host, target_port, default_queue_names, max_retries)
     return server.run()
+
+
+def read_queue_yaml(path):
+    queues = []
+    with open(path, "r") as f:
+        try:
+            data = yaml.safe_load(f)
+            for queue in data['queue']:
+                queues.append(queue['name'])
+
+        except yaml.YAMLError:
+            logging.exception("Error reading %s", path)
+            return (False, queues)
+
+    return (True, queues)
 
 
 if __name__ == '__main__':
@@ -53,6 +69,12 @@ if __name__ == '__main__':
         default=-1,
     )
 
+    start.add_argument(
+        "-Q", "--queue-yaml",
+        type=str, help="path to a queue.yaml to initialize the default queues",
+        default=None
+    )
+
     args = parser.parse_args()
     if args.subcommand != "start":
         parser.print_usage()
@@ -66,4 +88,15 @@ if __name__ == '__main__':
     else:
         root.setLevel(logging.INFO)
 
-    sys.exit(main("localhost", args.port, args.target_host, args.target_port, args.default_queue, args.max_retries))
+    default_queues = set(args.default_queue or [])
+
+    # FIXME: We simply read queue names from queue.yaml. Instead we should
+    # read all queue parameters and handle them correctly in the emulator
+    if args.queue_yaml:
+        success, queues = read_queue_yaml(args.queue_yaml)
+        if success:
+            default_queues = default_queues.union(set(queues))
+        else:
+            sys.exit(1)
+
+    sys.exit(main("localhost", args.port, args.target_host, args.target_port, default_queues, args.max_retries))
