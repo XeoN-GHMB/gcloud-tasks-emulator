@@ -75,6 +75,18 @@ if __name__ == '__main__':
         default=None
     )
 
+    start.add_argument(
+        "-P", "--queue-yaml-project",
+        type=str, help="project ID to use for queues created from queue-yaml",
+        default="[PROJECT]"
+    )
+
+    start.add_argument(
+        "-L", "--queue-yaml-location",
+        type=str, help="location ID to use for queues created from queue-yaml",
+        default="[LOCATION]"
+    )
+
     args = parser.parse_args()
     if args.subcommand != "start":
         parser.print_usage()
@@ -94,6 +106,14 @@ if __name__ == '__main__':
     # read all queue parameters and handle them correctly in the emulator
     if args.queue_yaml:
         success, queues = read_queue_yaml(args.queue_yaml)
+        queues = [
+            "projects/%s/locations/%s/queues/%s" % (
+                args.queue_yaml_project,
+                args.queue_yaml_location,
+                x
+            ) for x in queues
+        ]
+
         if success:
             default_queues = default_queues.union(set(queues))
         else:
