@@ -8,6 +8,16 @@ having to connect to the production Tasks API.
 
 **THIS IS A WORK IN PROGRESS NOT ALL API CALLS ARE COMPLETE**
 
+---
+
+## Looking for Commercial Support?
+
+Potato offers Commercial Support for all its Open Source projects and we can tailor a support package to your needs. 
+
+If you're interested in commercial support, training, or consultancy then go ahead and contact us at [opensource@potatolondon.com](mailto:opensource@potatolondon.com)
+
+---
+
 ## Usage
 
 Start the emulator with:
