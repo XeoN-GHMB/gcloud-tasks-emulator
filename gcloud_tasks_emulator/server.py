@@ -206,14 +206,24 @@ class QueueState(object):
             raise NotFound("Task not found: %s" % task_name)
 
         def now():
-            return Timestamp(seconds=int(datetime.now().timestamp()))
+            current_time = Timestamp()
+            current_time.GetCurrentTime()
+            return current_time
 
         schedule_time = now()
         dispatch_time = None
         response_time = None
         response_status = 200
 
-        task = self._queue_tasks[queue_name].pop(index)  # Remove the task
+        task: Task = self._queue_tasks[queue_name].pop(index)  # Remove the task
+
+        if task.HasField("schedule_time") and task.schedule_time.ToDatetime() >= schedule_time.ToDatetime():
+            logger.info(
+                "[TASKS] Task %s is scheduled for future execution. Moving it to the end of the queue.", task_name
+            )
+            self._queue_tasks[queue_name].append(task)
+            return task
+
         task.dispatch_count += 1
         try:
             dispatch_time = now()
