@@ -233,7 +233,7 @@ class QueueState(object):
             logger.error("[TASKS] Error submitting task, reason: %s", e.reason)
         except (ConnectionRefusedError, error.URLError):
             response_status = 500
-            logger.error("[TASKS] Error submitting task")
+            logger.error("[TASKS] Error submitting task %s", task_name)
         else:
             response_status = response.status
 
@@ -255,10 +255,10 @@ class QueueState(object):
 
         if 400 <= response_status < 600:
             if self._max_retries < 0 or task.dispatch_count <= self._max_retries:
-                logger.info("[TASKS] Moving failed task to the back of the queue")
+                logger.info("[TASKS] Moving failed task %s to the back of the queue.", task_name)
                 self._queue_tasks[queue_name].append(task)
             else:
-                logger.info("[TASKS] Giving up failed task")
+                logger.info("[TASKS] Giving up failed task %s", task_name)
 
         return task
 
