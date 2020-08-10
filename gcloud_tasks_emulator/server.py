@@ -1,9 +1,9 @@
-
 import logging
 import threading
 import time
 from concurrent import futures
 from datetime import datetime
+from typing import Dict
 from urllib import error, request
 from urllib.parse import parse_qs
 
@@ -25,11 +25,10 @@ Queue = queue_pb2.Queue
 Task = task_pb2.Task
 Attempt = task_pb2.Attempt
 
-
 logger = logging.getLogger("gcloud-tasks-emulator")
 
 
-def _make_task_request(queue_name, task, host, port):
+def _make_task_request(queue_name: str, task: Task, host: str, port: int):
     logger.info("[TASKS] Submitting task %s", task.name)
 
     headers = {}
@@ -39,7 +38,7 @@ def _make_task_request(queue_name, task, host, port):
         method = target_pb2.HttpMethod.Name(task.app_engine_http_request.http_method)
         data = task.app_engine_http_request.body
 
-        url = "http://%s:%s%s" % (
+        url = "http://%s:%d%s" % (
             host,
             port,
             task.app_engine_http_request.relative_uri
@@ -82,16 +81,15 @@ class QueueState(object):
         so they can be processed
     """
 
-    def __init__(self, target_host, target_port, max_retries):
-        self._queues = {}
-        self._queue_tasks = {}
-        self._target_host = target_host
-        self._target_port = target_port
-        self._max_retries = max_retries
+    def __init__(self, target_host: str, target_port: int, max_retries: int):
+        self._queues: Dict[str, Queue] = {}
+        self._queue_tasks: Dict[str, Task] = {}
+        self._target_host: str = target_host
+        self._target_port: int = target_port
+        self._max_retries: int = max_retries
 
-    def create_queue(self, parent, queue):
-        assert(queue.name)
-
+    def create_queue(self, parent, queue: Queue):
+        assert queue.name
         if queue.name not in self._queues:
             self._queues[queue.name] = queue
             self._queues[queue.name].state = (
@@ -102,7 +100,7 @@ class QueueState(object):
 
         return self._queues[queue.name]
 
-    def create_task(self, queue, task):
+    def create_task(self, queue: Queue, task: Task):
         task.name = task.name or "%s/tasks/%s" % (
             queue, int(datetime.now().timestamp() * 1000000)
         )
@@ -119,13 +117,13 @@ class QueueState(object):
             )
 
         if queue not in self._queue_tasks:
-            raise FailedPrecondition("Queue does not exist.")
+            raise FailedPrecondition(f"Queue {queue} does not exist.")
 
         self._queue_tasks[queue].append(task)
         logger.info("[TASKS] Created task %s", task.name)
         return task
 
-    def purge_queue(self, queue_name):
+    def purge_queue(self, queue_name: str):
         if queue_name in self._queues:
             # Wipe the tasks out
             logger.info("[TASKS] Purging queue %s", queue_name)
@@ -138,7 +136,7 @@ class QueueState(object):
             )
             raise ValueError("Invalid queue: %s" % queue_name)
 
-    def pause_queue(self, queue_name):
+    def pause_queue(self, queue_name: str):
         if queue_name in self._queues:
             logger.info("[TASKS] Pausing queue %s", queue_name)
             self._queues[queue_name].state = (
@@ -152,7 +150,7 @@ class QueueState(object):
             )
             raise ValueError("Invalid queue: %s" % queue_name)
 
-    def list_tasks(self, queue_name):
+    def list_tasks(self, queue_name: str):
         return self._queue_tasks[queue_name]
 
     def queue_names(self):
@@ -161,10 +159,10 @@ class QueueState(object):
     def queues(self):
         return list(self._queues.values())
 
-    def queue(self, name):
+    def queue(self, name: str) -> Queue:
         return self._queues[name]
 
-    def delete_queue(self, name):
+    def delete_queue(self, name: str):
         if name in self._queues:
             logger.info("[TASKS] Deleting queue %s", name)
             del self._queues[name]
@@ -172,7 +170,7 @@ class QueueState(object):
         if name in self._queue_tasks:
             del self._queue_tasks[name]
 
-    def submit_task(self, task_name):
+    def submit_task(self, task_name: str) -> Task:
         try:
             queue_name = task_name.rsplit("/", 2)[0]
             if queue_name not in self._queue_tasks:
@@ -243,9 +241,9 @@ class QueueState(object):
 
         task.MergeFrom(Task(**kwargs))
 
-        assert(task)
+        assert task
 
-        if 400 <= response_status and response_status < 600:
+        if 400 <= response_status < 600:
             if self._max_retries < 0 or task.dispatch_count <= self._max_retries:
                 logger.info("[TASKS] Moving failed task to the back of the queue")
                 self._queue_tasks[queue_name].append(task)
@@ -256,10 +254,10 @@ class QueueState(object):
 
 
 class Greeter(cloudtasks_pb2_grpc.CloudTasksServicer):
-    def __init__(self, state):
+    def __init__(self, state: QueueState):
         super().__init__()
 
-        self._state = state
+        self._state: QueueState = state
 
     def CreateQueue(self, request, context):
         try:
@@ -321,7 +319,7 @@ class Greeter(cloudtasks_pb2_grpc.CloudTasksServicer):
 
 
 class APIThread(threading.Thread):
-    def __init__(self, state, host, port, *args, **kwargs):
+    def __init__(self, state: QueueState, host: str, port: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._state = state
@@ -352,10 +350,10 @@ class APIThread(threading.Thread):
 
 
 class Processor(threading.Thread):
-    def __init__(self, state):
+    def __init__(self, state: QueueState):
         super().__init__()
 
-        self._state = state
+        self._state: QueueState = state
         self._is_running = threading.Event()
         self._known_queues = set()
         self._queue_threads = {}
@@ -370,7 +368,7 @@ class Processor(threading.Thread):
                 self.process_queue(queue)
             time.sleep(_LOOP_SLEEP_TIME)
 
-    def _process_queue(self, queue):
+    def _process_queue(self, queue: str):
         while self._is_running.is_set():
             # Queue was deleted, stop processing
             if queue not in self._state._queues:
@@ -388,7 +386,7 @@ class Processor(threading.Thread):
 
             time.sleep(_LOOP_SLEEP_TIME)
 
-    def process_queue(self, queue_name):
+    def process_queue(self, queue_name: str):
         if queue_name not in self._known_queues:
             # A queue was just created
             self._known_queues.add(queue_name)
