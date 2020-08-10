@@ -50,7 +50,7 @@ def _make_task_request(queue_name: str, task: Task, host: str, port: int):
             'X-AppEngine-TaskName': task.name.rsplit("/", 1)[-1],
             'X-AppEngine-TaskRetryCount': task.dispatch_count - 1,
             'X-AppEngine-TaskExecutionCount': task.dispatch_count - 1,
-            'X-AppEngine-TaskETA': 0,  # FIXME: Populate
+            'X-AppEngine-TaskETA': task.schedule_time.ToSeconds()
         })
     elif task.http_request.url:
         method = target_pb2.HttpMethod.Name(task.http_request.http_method)
@@ -62,7 +62,7 @@ def _make_task_request(queue_name: str, task: Task, host: str, port: int):
             'X-CloudTasks-TaskName': task.name.rsplit("/", 1)[-1],
             'X-CloudTasks-TaskRetryCount': task.dispatch_count - 1,
             'X-CloudTasks-TaskExecutionCount': task.dispatch_count - 1,
-            'X-CloudTasks-TaskETA': 0,  # FIXME: Populate
+            'X-CloudTasks-TaskETA': task.schedule_time.ToSeconds()
         })
     else:
         raise Exception("Either app_engine_http_request or http_request is required")
