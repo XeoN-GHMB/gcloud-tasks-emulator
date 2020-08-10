@@ -7,3 +7,5 @@
 .reports
 build
 dist
+venv
+.idea
