@@ -142,6 +142,10 @@ class TestCase(BaseTestCase):
         self.test_create_queue()  # Create a couple of queues
 
         path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
+        response = self._client.pause_queue(path)
+        self.assertEqual(response.state, 2)
+
+        path = self._client.queue_path('[PROJECT]', '[LOCATION]', "test_queue2")
         response = self._client.resume_queue(path)
         self.assertEqual(response.state, 1)
 
