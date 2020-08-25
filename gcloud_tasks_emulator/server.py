@@ -150,6 +150,20 @@ class QueueState(object):
             )
             raise ValueError("Invalid queue: %s" % queue_name)
 
+    def resume_queue(self, queue_name: str):
+        if queue_name in self._queues:
+            logger.info("[TASKS] Resuming queue %s", queue_name)
+            self._queues[queue_name].state = (
+                queue_pb2._QUEUE_STATE.values_by_name["RUNNING"].number
+            )
+            return self._queues[queue_name]
+        else:
+            logger.error(
+                "[TASKS] Tried to resume an invalid queue: %s",
+                queue_name
+            )
+            raise ValueError("Invalid queue: %s" % queue_name)
+
     def list_tasks(self, queue_name: str):
         return self._queue_tasks[queue_name]
 
@@ -291,6 +305,12 @@ class Greeter(cloudtasks_pb2_grpc.CloudTasksServicer):
     def PauseQueue(self, request, context):
         try:
             return self._state.pause_queue(request.name)
+        except GoogleAPICallError as err:
+            context.abort(err.grpc_status_code, err.message)
+
+    def ResumeQueue(self, request, context):
+        try:
+            return self._state.resume_queue(request.name)
         except GoogleAPICallError as err:
             context.abort(err.grpc_status_code, err.message)
 
