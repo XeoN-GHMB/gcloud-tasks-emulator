@@ -90,6 +90,10 @@ If your project uses a queue.yaml file, you can create default queues by passing
 Additionally, you'll likely want to pass `--queue-yaml-project` and `--queue-yaml-location` to generate the correct
 fully qualified queue names. These settings will otherwise default to `"[PROJECT]"` and `"[LOCATION]"` respectively.
 
+## Specifying a target
+
+Task queue needs to point at a service for outgoing requests. You can specify this with `--target-host` and `--target-port`
+
 ## Testing
 Run:
 ```
