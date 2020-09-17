@@ -43,7 +43,7 @@ setup(
     install_requires=[
         'grpcio>=1.29.0',
         'pyyaml>=5.3.1',
-        'google-cloud-tasks>=1.3.0',
+        'google-cloud-tasks<2.0.0',
     ],
     python_requires='>=3.6',
 )
