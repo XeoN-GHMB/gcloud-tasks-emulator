@@ -37,6 +37,7 @@ setup(
         'Programming Language :: Python',
     ],
     scripts=[
+        "bin/gcloud-tasks-emulator.py",
         "bin/gcloud-tasks-emulator",
     ],
     install_requires=[
