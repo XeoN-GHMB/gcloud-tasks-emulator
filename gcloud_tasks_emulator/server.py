@@ -184,7 +184,12 @@ class QueueState(object):
         if name in self._queue_tasks:
             del self._queue_tasks[name]
 
-    def submit_task(self, task_name: str) -> Task:
+    def submit_task(self, task_name: str, force_run: bool = False) -> Task:
+        """
+            Actually executes a task. If force_run is True then the scheduled
+            time will be ignored. This is used mainly for the RunTask API call.
+        """
+
         try:
             queue_name = task_name.rsplit("/", 2)[0]
             if queue_name not in self._queue_tasks:
@@ -231,7 +236,11 @@ class QueueState(object):
 
         task: Task = self._queue_tasks[queue_name].pop(index)  # Remove the task
 
-        if task.HasField("schedule_time") and task.schedule_time.ToDatetime() >= schedule_time.ToDatetime():
+        if (
+            (not force_run) and
+            task.HasField("schedule_time") and
+            task.schedule_time.ToDatetime() >= schedule_time.ToDatetime()
+        ):
             logger.info(
                 "[TASKS] Task %s is scheduled for future execution. Moving it to the end of the queue.", task_name
             )
@@ -343,7 +352,7 @@ class Greeter(cloudtasks_pb2_grpc.CloudTasksServicer):
 
     def RunTask(self, request, context):
         try:
-            return self._state.submit_task(request.name)
+            return self._state.submit_task(request.name, force_run=True)
         except GoogleAPICallError as err:
             context.abort(err.grpc_status_code, err.message)
 
