@@ -257,6 +257,9 @@ class QueueState(object):
         except (ConnectionError, error.URLError):
             response_status = 500
             logger.error("[TASKS] Error submitting task %s", task_name)
+        except Exception as e:
+            response_status = 500
+            logger.error("[TASKS] Unexpected exception while submitting task %s.", task_name, e)
         else:
             response_status = response.status
 
