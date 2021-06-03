@@ -257,7 +257,11 @@ class QueueState(object):
         except (ConnectionError, error.URLError) as e:
             response_status = 500
             logger.error(
-                "[TASKS] Error submitting task %s:\n%s: %s", task_name, type(e).__name__, e
+                "[TASKS] Error submitting task %s, reason: %s:\n%s: %s",
+                task_name, getattr(e, 'reason', ''), type(e).__name__, e
+            )
+            logger.error(
+                "[TASKS] Host was %s:%s" % (self._target_host, port)
             )
         except Exception as e:
             response_status = 500
