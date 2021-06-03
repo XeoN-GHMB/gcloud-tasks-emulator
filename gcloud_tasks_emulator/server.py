@@ -253,12 +253,15 @@ class QueueState(object):
             response = _make_task_request(queue_name, task, self._target_host, port)
         except error.HTTPError as e:
             response_status = e.code
-            logger.error("[TASKS] Error submitting task, reason: %s", e.reason)
-        except (ConnectionRefusedError, error.URLError) as e:
+            logger.error("[TASKS] Error submitting task %s, reason: %s", task_name, e.reason)
+        except (ConnectionError, error.URLError):
             response_status = 500
             logger.error(
                 "[TASKS] Error submitting task %s:\n%s: %s", task_name, type(e).__name__, e
             )
+        except Exception as e:
+            response_status = 500
+            logger.error("[TASKS] Unexpected exception while submitting task %s.", task_name, e)
         else:
             response_status = response.status
 
