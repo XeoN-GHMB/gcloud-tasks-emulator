@@ -254,7 +254,7 @@ class QueueState(object):
         except error.HTTPError as e:
             response_status = e.code
             logger.error("[TASKS] Error submitting task %s, reason: %s", task_name, e.reason)
-        except (ConnectionError, error.URLError):
+        except (ConnectionError, error.URLError) as e:
             response_status = 500
             logger.error(
                 "[TASKS] Error submitting task %s:\n%s: %s", task_name, type(e).__name__, e
